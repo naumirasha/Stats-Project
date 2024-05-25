@@ -1,0 +1,191 @@
+---
+title: '1'
+author: "Ariel Harewood, Angie Raymundo, Chamiqua Loswijk, Hanfei Dong, and Naumi Rasha"
+date: "2024-04-23"
+output: html_document
+---
+```{r}
+load("D:/psy StatMethod/BRFSS2022_rev.RData")
+```
+
+```{r}
+library(tidyverse) # for data manipulation and visualization
+library(dplyr)     # for data cleaning
+```
+
+```{r}
+# After running this, all column names` in data will have no spaces (they will be replaced with underscores) and will be in lowercase. This can make it easier to reference columns in subsequent analysis.
+brfss22 <- brfss22 %>%
+  rename_with(~ gsub(" ", "_", .x, fixed = TRUE)) %>%
+  rename_with(~ tolower(.x))
+```
+
+```{r}
+# summary table for ACE variables
+ace_summary <- brfss22 %>%
+  summarise(across(starts_with("ace"), ~sum(!is.na(.x))))
+# summary table for Substance Use variables
+substance_summary <- brfss22 %>%
+  summarise(across(c("smoke100", "smokday2", "ecignow2", "alcday4", "avedrnk3", "drnk3ge5", "marijan1"), ~sum(!is.na(.x))))
+```
+
+```{r}
+total_population <- nrow(brfss22)
+```
+
+```{r}
+#Converting the result into a binary
+brfss22_ace_binary <- data.frame(
+  acedeprs = ifelse(brfss22$acedeprs == "Yes, Adverse Childhood Exper, lived with someone who was depressed, mentally ill, or suicidal", TRUE, FALSE),
+  acedrink = ifelse(brfss22$acedrink == "Yes, Adverse Childhood Exper, lived with someone who was a problem drinker or alcoholic", TRUE, FALSE),
+  acedrugs = ifelse(brfss22$acedrugs == "Yes, Adverse Childhood Exper, lived with someone who used illegal street drugs or who abused prescription medications", TRUE, FALSE),
+  aceprisn = ifelse(brfss22$aceprisn == "Yes, Adverse Childhood Exper, lived with someone who served time or was sentenced to serve time in a prison, jail, or other correctional facility", TRUE, FALSE),
+  acedivrc = ifelse(brfss22$acedivrc == "Yes, Adverse Childhood Exper, parents separated or divorced", TRUE, FALSE),
+  acepunch = ifelse(brfss22$acepunch %in% c("once", "more than once"), TRUE, FALSE),
+  acehurt1 = ifelse(brfss22$acehurt1 %in% c("once", "more than once"), TRUE, FALSE),
+  aceswear = ifelse(brfss22$aceswear %in% c("once", "more than once"), TRUE, FALSE),
+  acetouch = ifelse(brfss22$acetouch %in% c("once", "more than once"), TRUE, FALSE)
+)
+```
+
+```{r}
+#Converting the result into a binary
+brfss22
+brfss22_substance_binary <- data.frame(
+  smoke100 = ifelse(brfss22$smoke100 == "yes smoked at least 100 cigs in life", TRUE, FALSE),
+  smokday2 = ifelse(brfss22$smokday2 %in% c("smoke every day", "smoke some days"), TRUE, FALSE),
+  ecignow2 = ifelse(brfss22$ecignow2 %in% c("use every day", "use some days"), TRUE, FALSE),
+  alcday4 = ifelse(brfss22$alcday4 %in% c("1 in last month", "2 in last month", "1 alchoholic drink in past week", "2 in week", "(Other)"), TRUE, FALSE)
+)
+
+```
+
+```{r}
+print("ACE convert result：")
+print(brfss22_ace_binary)
+print("Substance use convert result：")
+print(brfss22_substance_binary)
+```
+
+```{r}
+data <- data.frame(smoke100 = brfss22_substance_binary$smoke100, brfss22_ace_binary)
+
+# Logistic regression model
+model <- glm(smoke100 ~ ., data = data, family = "binomial")
+
+summary(model)
+```
+
+#smoke100(smoked at least 100 cigs in life) & ACE/adverse childhood experiences
+acedeprsTRUE:
+Estimated coefficient (Estimate): -0.193252
+Std. Error: 0.028008
+z value: -6.900
+p-value (Pr(>|z|)): 5.2e-12 (highly significant)
+Interpretation: The estimated coefficient on acedeprsTRUE indicates that individuals affected by adverse childhood experiences (family members with depression, mental illness, or suicidal ideation) have an estimated decrease of about 0.19 units in the log odds of smoke100 being "yes" compared to unaffected individuals. This coefficient is highly significant, indicating a significant negative association between adverse childhood experiences and smoke100.
+
+acedrinkTRUE:
+Estimated coefficient (Estimate): 0.327059
+Standard Error (Std. Error): 0.024936
+z value: 13.116
+p-value (Pr(>|z|)): < 2e-16 (highly significant)
+Interpretation: The estimated coefficient on acedrinkTRUE indicates that individuals affected by adverse childhood experiences (problem drinkers or alcoholic family members) have an estimated increase of about 0.33 units in the log odds of smoke100 being "yes" compared to unaffected individuals. This coefficient is highly significant, indicating a significant positive association between adverse childhood experiences and smoke100.
+
+acedrugsTRUE:
+Estimated coefficient (Estimate): 0.403527
+Std. Error: 0.037355
+z value: 10.802
+p-value (Pr(>|z|)): < 2e-16 (highly significant)
+Interpretation: Individuals affected by adverse childhood experiences (living with a family member who abused illegal drugs or prescription drugs) have an increase of about 0.40 units in the estimated log odds of smoke100 being "yes" compared to unaffected individuals. This coefficient is highly significant, indicating a significant positive association between adverse childhood experiences and smoke100.
+
+aceprisnTRUE:
+Estimated coefficient (Estimate): 0.086197
+Standard Error (Std. Error): 0.040585
+z value: 2.124
+p value (Pr(>|z|)): 0.0337 (*)
+Interpretation: Individuals affected by adverse childhood experiences (having a family member who has served a sentence or has been sentenced to a prison, detention center, or other correctional facility) have an increase of about 0.09 units in the estimate of the log odds of smoke100 being "yes" compared to unaffected individuals. The coefficient has a significance level of 0.0337, which is slightly lower than the usual significance level of 0.05, but it can still be considered a significant positive correlation.
+
+acedivrcTRUE:
+Estimated coefficient (Estimate): 0.232995
+Standard Error (Std. Error): 0.023144
+z value: 10.067
+p-value (Pr(>|z|)): < 2e-16 (highly significant)
+Interpretation: Individuals affected by adverse childhood experiences (parental separation or divorce) have an estimated increase of about 0.23 units in the log odds of smoke100 being "yes" compared to unaffected individuals. This coefficient is highly significant, indicating a significant positive association between adverse childhood experiences and smoke100.
+
+acetouchTRUE:
+Estimated coefficient (Estimate): 0.284897
+Std. Error: 0.031066
+z value: 9.171
+p-value (Pr(>|z|)): < 2e-16 (highly significant)
+Interpretation: Individuals affected by an adverse childhood experience (having experienced sexual assault or harassment) have an estimated increase of about 0.28 units in the log odds of smoke100 being "yes" compared to unaffected individuals. This coefficient is highly significant, indicating a significant positive association between adverse childhood experiences and smoke100.
+
+None of the remaining results were significant.
+
+Considering these results together, we can assume that adverse childhood experiences have some predictive power for smoking behavior. However, different childhood experiences may have different degrees of influence on an individual's smoking behavior, and not all ACE factors have a significant effect on smoking behavior, which requires a comprehensive consideration of an individual's background characteristics and other possible influencing factors.
+
+```{r}
+brfss22 <- brfss22 %>%
+  mutate(Age_midpt = case_when(
+    x_ageg5yr == "21" ~ "Age 18 to 24",
+    x_ageg5yr == "27" ~ "Age 25 to 29",
+    x_ageg5yr == "32" ~ "Age 30 to 34",
+    x_ageg5yr == "37" ~ "Age 35 to 39",
+    x_ageg5yr == "42" ~ "Age 40 to 44",
+    x_ageg5yr == "47" ~ "Age 45 to 49",
+    x_ageg5yr == "52" ~ "Age 50 to 54",
+    x_ageg5yr == "57" ~ "Age 55 to 59",
+    x_ageg5yr == "62" ~ "Age 60 to 64",
+    x_ageg5yr == "67" ~ "Age 65 to 69",
+    x_ageg5yr == "72" ~ "Age 70 to 74",
+    x_ageg5yr == "77" ~ "Age 75 to 79",
+    x_ageg5yr == "82" ~ "Age 80 or older",
+    
+  ))
+```
+
+```{r}
+brfss22 <- brfss22 %>%
+  mutate(ecignow2 = case_when(
+    ecignow2 %in% c("use every day", "use some days") ~ "yes",
+    ecignow2 %in% c("never used e-cigarettes in life") ~ "never",
+    ecignow2 == "not at all right now" ~ "quit",
+    TRUE ~ "no"
+  ))
+
+```
+
+```{r}
+brfss22$Age_midpt <- as.character(brfss22$Age_midpt)
+```
+
+```{r}
+# Group and calculate the number and proportion of people in each age group who use e-cigarettes
+ecig_age_counts <- ecig_age_counts %>%
+  mutate_at(vars(never, yes, quit), ~replace(., is.na(.), 0)) %>%
+  mutate(Total = never + yes + quit,
+         Proportion_Yes = ifelse(Total == 0, 0, yes / Total))
+```
+
+
+```{r}
+print(ecig_age_counts)
+```
+
+```{r}
+# Create binary variable for ECIGNOW2
+brfss22_ecig_binary <- brfss22 %>%
+  mutate(ecignow2_binary = case_when(
+    ecignow2 %in% c("use every day", "use some days") ~ TRUE,
+    TRUE ~ FALSE
+  ))
+
+# Combine ACE and ECIGNOW2 binary variables
+data <- data.frame(ecignow2 = brfss22_ecig_binary$ecignow2_binary, brfss22_ace_binary)
+
+# Logistic regression model
+model <- glm(ecignow2 ~ ., data = data, family = "binomial")
+
+summary(model)
+```
+#ECIGNOW2(current e-cigarettes use) & ACE/adverse childhood experiences
+The relationship between ECIGNOW2 (e-cigarette use) and ACE (Adverse Childhood Experiences) was assessed based on the results of logistic regression modeling. The results showed that no significant associations with e-cigarette use were observed for all factors involved in Adverse Childhood Experiences (ACE), including depression, mental illness, alcoholism, substance abuse, incarceration, parental separation, domestic violence, and sexual abuse by family members. All of the estimated coefficients had p-values above the significance level (α = 0.05), indicating that there was no significant relationship between these factors and e-cigarette use. Therefore, based on these modeling results, we did not find evidence to support an association between adverse childhood experiences and e-cigarette use.
